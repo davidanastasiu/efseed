@@ -334,8 +334,6 @@ class EFSEED:
         else:
             mape = 100
             
-        print("Inferencing total MAPE: ", mape)
-            
         return total,  mape, val_pred_lists_print
 
 
@@ -359,85 +357,6 @@ class EFSEED:
         self.hour = self.dataset.get_hour()              
         rmse, mape, aa = self.generate_test_rmse_mape() # inference on test set
         return aa
-
-
-    def generate_test(self):
-        test_predict=np.zeros(self.predict_days)
-        #test_data
-        val_set=pd.read_csv('/home/yanhong/hydro/test_timestamps_24avg.tsv',sep='\t')
-        val_points=val_set["Start"]
-        total = 0 
-        val_rmse_list = []
-        val_pred_list = []
-        val_pred_lists_print = []
-        gt_mape_list = []
-        val_mape_list = []
-#         val_points = self.test_data
-        test_predict = np.zeros(self.predict_days * self.output_dim)
-
-        non_flag = 0     
-        start = time.time()
-        for i in range(len(val_points)):     
-            start = time.time()
-            val_pred_list_print = []
-            val_point = val_points[i]
-            test_predict, ground_truth = self.test_single(val_point)  
-            test_predict = (test_predict + abs(test_predict))/2
-            rec_predict = test_predict
-            val_MSE = np.square(np.subtract(ground_truth, test_predict)).mean() 
-            val_RMSE = math.sqrt(val_MSE)
-            val_rmse_list.append(val_RMSE)
-            total += val_RMSE         
-            
-            for j in range(len(rec_predict)):
-                temp = [val_point, j, rec_predict[j]]
-                val_pred_list.append(temp)
-                val_pred_list_print.append(rec_predict[j])
-            
-            val_pred_lists_print.append(val_pred_list_print)
-            gt_mape_list.extend(ground_truth)
-            val_mape_list.extend(test_predict)
-        end = time.time()
-        print("Inferencing test points ", len(val_points), " use: ", end-start)
-        
-
-        pd_temp = pd.DataFrame(val_pred_list, columns=("start", "No.", "prediction"))
-    
-        if(self.is_over_sampling == 1):
-            OS = "_OS" + str(self.opt.oversampling)
-        else:
-            OS = "_OS-null"
-
-        if(self.is_watersheds == 1) :
-            if(self.is_prob_feature == 0) :
-                watersheds = "shed"
-            else:
-                watersheds = "Shed-ProbFeature"
-        elif(self.is_prob_feature == 0) :
-            watersheds = "solo"
-        else:
-            watersheds = "ProbFeature"
-                
-        basic_path = self.test_dir + '/' + str(self.sensor_id) + OS
-        basic_model_path = self.expr_dir + '/' + str(self.sensor_id) + OS    
-        
-        if self.opt.save == 1:
-            aa = pd.DataFrame(data = val_pred_lists_print)
-            i_dir = basic_path + '_' + watersheds + str(self.TrainEnd) + '_pred_lists_print.tsv'
-            aa.to_csv(i_dir, sep = '\t')
-            print("Inferencing result is saved in: ", i_dir)
-
-    
-        print("Inferencing total RMSE: ", total)
-
-        if non_flag == 0:
-            mape = mean_absolute_percentage_error(np.array(gt_mape_list)+1, np.array(val_mape_list)+1)
-        else:
-            mape = 100
-            
-        print("Inferencing total MAPE: ", mape)
-            
-        return total,  mape
 
     def compute_metrics(self, aa):
         val_set=pd.read_csv('./data_provider/datasets/test_timestamps_24avg.tsv',sep='\t')
@@ -471,7 +390,7 @@ class EFSEED:
             temp_vals4=list(vals4[ind-1])
             all_GT.extend(x[15*24*4:])
             all_DAN.extend(temp_vals4) 
-        metrics = metric_g("EFSEED", np.array(all_DAN), np.array(all_GT))
+        metrics = metric_rolling(np.array(all_DAN), np.array(all_GT))
         return metrics
 
         
@@ -541,11 +460,10 @@ class EFSEED:
                 loss0 = self.criterion_KL(F.log_softmax(out0,dim=1), F.softmax(seg_label_g0,dim=1))  
                 loss1 = self.criterion_KL(F.log_softmax(out1,dim=1), F.softmax(seg_label_g1,dim=1)) 
                 loss3 = self.criterion_KL(F.log_softmax(out3,dim=1), F.softmax(seg_label_g3,dim=1))
-                loss4 = self.criterion(out4, seg_label_g4)                 
-                loss5 = self.criterion(out2[:,:12],seg_label_g4[:,:12])                
+                loss4 = self.criterion(out4, seg_label_g4)                              
                  
                 l_w = max(-1 * np.exp(epoch/45) + 2, 0.2)
-                loss = l_w *100 *( loss0 + loss1 + loss3) + loss4 + loss5
+                loss = l_w *100 *( loss0 + loss1 + loss3) + loss4 
    
                 loss.backward()
                 self.encoder_optimizer.step()

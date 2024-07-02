@@ -11,7 +11,7 @@ import random
 from utils.utils2 import *
 from models.EFSEED import *
 from models.EFSEED_model import *
-from sklearn.metrics import mean_absolute_percentage_error
+from utils.metric import *
 from datetime import datetime, timedelta
 import zipfile
 random.seed('a')
@@ -98,7 +98,7 @@ class EFSEED_I:
 
     def get_data(self, test_point):
         
-        print("test_point is: ", test_point)
+#         print("test_point is: ", test_point)
         # data prepare
         trainX = pd.read_csv('./data_provider/datasets/'+ self.opt.stream_sensor+'.csv', sep='\t')
         trainX.columns = ["id", "datetime", "value"] 
@@ -111,32 +111,31 @@ class EFSEED_I:
         point = trainX[trainX["datetime"]==test_point].index.values[0]
         stream_data = trainX[point-15*24*4:point]["value"].values.tolist()
         gt = trainX[point:point+3*24*4]["value"].values.tolist()
-        NN = np.isnan(stream_data).any() 
-        if NN:
-            print("There is None value in the stream input sequence.")  
-        NN = np.isnan(gt).any() 
-        if NN:
-            print("There is None value in the ground truth sequence.")  
         
         # read rain data
         R_X = pd.read_csv('./data_provider/datasets/'+self.opt.rain_sensor+'.csv', sep='\t')
         R_X.columns = ["id", "datetime", "value"] 
         point = R_X[R_X["datetime"]==test_point].index.values[0]
         rain_data = R_X[point-self.train_days-self.ind_dim:point]["value"].values.tolist()
-        NN = np.isnan(rain_data).any() 
+        NN = np.isnan(rain_data).any() or np.isnan(stream_data).any() or np.isnan(gt).any() 
         if NN:
-            print("There is None value in the rain input sequence.")      
+#             print(test_point, ": There is None value.")  
+            gt = None 
        
         return stream_data, rain_data, gt
     
     def test_single(self, test_point):
         
         stream_data, indicator_data, gt = self.get_data(test_point)  
+        if gt is None:
+            pre = None
+            return pre, gt
         pre = self.predict(test_point, stream_data, indicator_data)
         
         return pre, gt
     
     def predict(self, test_point, stream_data, rain_data=None):
+        
         
         time_str = test_point
         self.encoder.eval()
@@ -191,4 +190,17 @@ class EFSEED_I:
         
         return test_predict
     
-
+    def Inference(self):
+        test_set = pd.read_csv('./data_provider/datasets/test_timestamps_24avg.tsv',sep='\t')
+        test_points = test_set["Hold Out Start"]
+        count = 0
+        pre = []
+        gt = []
+        for testP in test_points:
+            predicted, ground_truth = self.test_single(testP)
+            if ground_truth is not None:
+                count += 1        
+                pre.extend(predicted)
+                gt.extend(ground_truth)
+        print("Valid points: ", count)
+        metric_rolling(pre, gt)       
