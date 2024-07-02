@@ -62,3 +62,30 @@ def metric_g(name, pre, gt):
     lll.append(l2)
     lll.append(l3)
     return lll
+
+def metric_rolling(pre, gt):
+    pre = np.array(pre)
+    gt = np.array(gt)
+    ll = int(len(pre)/288)
+    rmse_all1 = []
+    mape_all1 = []
+    rmse_all2 = []
+    mape_all2 = []    
+    for i in range(ll):
+        _, _, rmse1, mape1 = metric('EFSEED', pre[i*288:(i*288+288)], gt[i*288:(i*288+288)])
+        _, _, rmse2, mape2 = metric('EFSEED', pre[i*288:(i*288+16)], gt[i*288:(i*288+16)])
+        rmse_all1.append(rmse1)
+        mape_all1.append(mape1)
+        rmse_all2.append(rmse2)
+        mape_all2.append(mape2)        
+    rmse1 = np.around(np.mean(np.array(rmse_all1)),2)
+    mape1 = np.around(np.mean(np.array(mape_all1)),3)
+    print("For rolling prediction: 3 days")
+    print("RMSE: ", rmse1)
+    print("MAPE: ", mape1)
+    rmse2 = np.around(np.mean(np.array(rmse_all2)),2)
+    mape2 = np.around(np.mean(np.array(mape_all2)),3)
+    print("For rolling prediction: 4 hours")
+    print("RMSE: ", rmse2)
+    print("MAPE: ", mape2)    
+    return rmse1, mape1, rmse2, mape2
