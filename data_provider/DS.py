@@ -330,9 +330,9 @@ class DS:
                     if a3 > 0:
                         i = i + max_index -1
                         i = i - a3*a5
-                    for kk in range(a3*2-1): 
+                    for kk in range(a3-1): 
                         i = i + a5 
-                        if i > len(self.data)-18*24*4-1 or i < 3*24*4 :
+                        if i > len(self.data)-18*24*4-1 or i < 18*24*4 :
                             continue
                         if ( not np.isnan(self.sensor_data_norm1[i:i+self.lens]).any() and self.tag[i+self.train_days] != 2 and self.tag[i+self.train_days] != 3  and self.tag[i+self.train_days] != 4): 
                 
