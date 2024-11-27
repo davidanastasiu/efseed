@@ -166,14 +166,15 @@ class DecoderLSTM(nn.Module):
         h0 = encoder_h
         c0 = encoder_c
 
-        bb = torch.cat([x1[:,0:1,:], x1[:,36:37,:]], dim = 1)
-        bb = torch.cat([bb, x1[:,72:73,:]], dim = 1)
-        bb = torch.cat([bb, x1[:,108:109,:]], dim = 1)
-        bb = torch.cat([bb, x1[:,144:145,:]], dim = 1)
-        bb = torch.cat([bb, x1[:,180:181,:]], dim = 1)
-        bb = torch.cat([bb, x1[:,216:217,:]], dim = 1)
-        bb = torch.cat([bb, x1[:,252:253,:]], dim = 1)
-        bb = torch.cat([bb, x1[:,288:289,:]], dim = 1)
+        uu = int(self.predict_days/8) #32,
+        bb = torch.cat([x1[:,0:1,:], x1[:,uu:uu+1,:]], dim = 1)
+        bb = torch.cat([bb, x1[:,2*uu:2*uu+1,:]], dim = 1)
+        bb = torch.cat([bb, x1[:,3*uu:3*uu+1,:]], dim = 1)
+        bb = torch.cat([bb, x1[:,4*uu:4*uu+1,:]], dim = 1)
+        bb = torch.cat([bb, x1[:,5*uu:5*uu+1,:]], dim = 1)
+        bb = torch.cat([bb, x1[:,6*uu:6*uu+1,:]], dim = 1)
+        bb = torch.cat([bb, x1[:,7*uu:7*uu+1,:]], dim = 1)
+        bb = torch.cat([bb, x1[:,8*uu:8*uu+1,:]], dim = 1)
           
         # segment predict with 8 width      
         out, (hn, cn) = self.lstm00(bb, (h0[0],c0[0]))
@@ -183,7 +184,7 @@ class DecoderLSTM(nn.Module):
         out0 = torch.squeeze(out00) # aggr level 0       
         
         # expand seg0 8 to 32 width
-        for i in range(32):
+        for i in range(uu):
             if i == 0:
                 temp0 = out[:,0:1,:]
             else:
@@ -196,8 +197,8 @@ class DecoderLSTM(nn.Module):
         out01 = out01.permute(0,2,1)
         out1 = torch.squeeze(out01) # aggr level 1
 
-        # expand seg1 32 to 96 width
-        for i in range(96):
+        # expand seg1 uu to 3*uu width
+        for i in range(3*uu):
             if i == 0:
                 temp0 = out[:,0:1,:]
             else:
@@ -210,8 +211,8 @@ class DecoderLSTM(nn.Module):
         out03 = out03.permute(0,2,1)
         out3 = torch.squeeze(out03) # aggr level 3              
         
-        # expand seg_label_p 96 to 288 width
-        for i in range(288):
+        # expand seg_label_p 3*uu to self.predict_days width
+        for i in range(self.predict_days):
             if i == 0:
                 temp0 = out[:,0:1]
             else:
@@ -225,9 +226,9 @@ class DecoderLSTM(nn.Module):
         
         # add residue layer
         if(self.opt.watershed == 0):
-            x = x3[:,-288:,0:1] 
+            x = x3[:,-1*self.predict_days:,0:1] 
         else:
-            x = x3[:,-288:,1:2]
+            x = x3[:,-1*self.predict_days:,1:2]
         in5 = torch.cat([torch.flip(x, [1]),x1],dim=2)        
         out, (hn, cn) = self.lstm05(in5, (h0[5],c0[5]))  
         

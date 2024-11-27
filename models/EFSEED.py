@@ -379,7 +379,7 @@ class EFSEED:
             ii=val_points[loop]
             val_point=val_points[ind]
             point=trainX[trainX["datetime"]==ii].index.values[0]
-            x=trainX[point-15*24*4:point+3*24*4]["value"].values.tolist()    
+            x=trainX[point-self.train_days:point+self.predict_days]["value"].values.tolist()    
             if (np.isnan(np.array(x)).any()):
                 loop = loop + 1 # id for time list 
                 continue
@@ -388,7 +388,7 @@ class EFSEED:
                 break   
             ind += 1  
             temp_vals4=list(vals4[ind-1])
-            all_GT.extend(x[15*24*4:])
+            all_GT.extend(x[self.train_days:])
             all_DAN.extend(temp_vals4) 
         metrics = metric_rolling(np.array(all_DAN), np.array(all_GT))
         return metrics
@@ -434,13 +434,14 @@ class EFSEED:
                 q0 = torch.tensor([self.quantile/100]).to(device)
                 
                 # compute ground segment label (Ensemble times=8, 32, 96, 288)
-                y_train_s = y_train.view(y_train.size(0), 8, 6*2*3)
+                s_l = int(self.predict_days/36)  # expand times 4, 3, 3, 4*3*3=36
+                y_train_s = y_train.view(y_train.size(0), s_l, int(self.predict_days/s_l))
                 seg_label_g0 = torch.quantile(y_train_s,q0, dim=2)[0]
                 
-                y_train_s = y_train.view(y_train.size(0),32, 3*3)
+                y_train_s = y_train.view(y_train.size(0),4*s_l, int(self.predict_days/(4*s_l)))
                 seg_label_g1 = torch.quantile(y_train_s,q0, dim=2)[0]
 
-                y_train_s = y_train.view(y_train.size(0), 96, 3)
+                y_train_s = y_train.view(y_train.size(0), 12*s_l, int(self.predict_days/(12*s_l)))
                 seg_label_g3 = torch.quantile(y_train_s,q0, dim=2)[0]
 
                 seg_label_g4 = y_train 

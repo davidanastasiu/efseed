@@ -280,7 +280,7 @@ class DS:
             while ii < self.opt.val_size:
                   
 # use randomly chosen validation set            
-                i = random.randint(3*24, len(self.data)-18*24-1)
+                i = random.randint(self.predict_days, len(self.data)-2*self.predict_days-1)
                 a1 = -9
                 a2 = -6          
                 if (not np.isnan(self.sensor_data_norm1[i:i+self.lens]).any()) and (not np.isnan(self.R_data[i:i+self.lens]).any())  and (self.tag[i+self.train_days] <= a1 or a2 < self.tag[i+self.train_days] < 0 or 2 <= self.tag[i+self.train_days] <= 3 ): 
@@ -318,7 +318,7 @@ class DS:
             ii = 0
             jj = 0
             while ii < self.opt.train_volume*(1-self.oversampling/100) or jj < self.opt.train_volume*(self.oversampling/100):            
-                i = random.randint(3*24*4, len(self.sensor_data_norm)-93*24*4-1)
+                i = random.randint(self.predict_days, len(self.sensor_data_norm)-31*self.predict_days-1)
                 pre1 = np.array(self.sensor_data_norm[(i+self.train_days):(i+self.train_days+self.predict_days)]) 
                 a1 = -9
                 a2 = -6
@@ -332,7 +332,7 @@ class DS:
                         i = i - a3*a5
                     for kk in range(a3-1): 
                         i = i + a5 
-                        if i > len(self.data)-18*24*4-1 or i < 18*24*4 :
+                        if i > len(self.data)-6*self.predict_days-1 or i < 6*self.predict_days :
                             continue
                         if ( not np.isnan(self.sensor_data_norm1[i:i+self.lens]).any() and self.tag[i+self.train_days] != 2 and self.tag[i+self.train_days] != 3  and self.tag[i+self.train_days] != 4): 
                 
