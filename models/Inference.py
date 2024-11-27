@@ -31,8 +31,7 @@ class EFSEED_I:
         self.is_watersheds = opt.watershed
         self.is_prob_feature = 1 
         self.TrainEnd = opt.model
-        self.ind_dim = opt.r_shift
-        self.is_stream = opt.is_stream          
+        self.ind_dim = opt.r_shift         
         self.is_over_sampling = 1
 
         self.batchsize = opt.batchsize

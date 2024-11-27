@@ -22,8 +22,7 @@ class Options():
         self.parser.add_argument('--train_seed', type=int, default=1010, help='random seed for train sampling')
         self.parser.add_argument('--val_seed', type=int, default=2007, help='random seed for val sampling')
         self.parser.add_argument('--stream_sensor', type=str, default='SFC_S_fixed', help='stream dataset')
-        self.parser.add_argument('--rain_sensor', type=str, default='SFC_R_fixed', help='rain dataset')
-        self.parser.add_argument('--is_stream', default=1, help='stream:1, reservoir:0')        
+        self.parser.add_argument('--rain_sensor', type=str, default='SFC_R_fixed', help='rain dataset')       
         
         self.parser.add_argument('--batchsize', type=int, default=48, help='batch size of train data')
         self.parser.add_argument('--epochs', type=int, default=50, help='train epochs')

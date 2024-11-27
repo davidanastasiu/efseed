@@ -54,8 +54,7 @@ class EFSEED:
         self.is_prob_feature = 1 
         self.TrainEnd = opt.model
         self.os = opt.oversampling
-        self.r_shift = opt.r_shift
-        self.is_stream = opt.is_stream    
+        self.r_shift = opt.r_shift  
         self.quantile = opt.quantile       
         self.is_over_sampling = 1
 
