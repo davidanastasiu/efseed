@@ -77,7 +77,7 @@ class EncoderLSTM(nn.Module):
         c2 = torch.zeros(self.layer_dim*2*2, x.size(0), self.hidden_dim).to(device)           
         
         # FC embedding
-        x0 = x[:,-288:,0:1]        
+        x0 = x[:,-1*self.predict_days:,0:1]        
         x1 = T(self.fc_embed(x[:,:,:self.dim_in]))
         x2 = x1.permute(0,2,1)
     

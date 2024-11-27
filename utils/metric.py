@@ -42,10 +42,10 @@ def metric(model, pred, true):
 
     return mae, mse, rmse, mape #, mspe
 
-def metric_g(name, pre, gt):
+def metric_g(name, pre, gt, predict_days=288):
     pre = np.array(pre)
     gt = np.array(gt)
-    ll = int(len(pre)/288)
+    ll = int(len(pre)/predict_days)
     mae_all = []
     mse_all = []
     rmse_all = []
@@ -54,7 +54,7 @@ def metric_g(name, pre, gt):
     l3 = []
     lll=[]
     for i in range(ll):
-        mae, mse, rmse, mape = metric(name, pre[i*288:(i+1)*288], gt[i*288:(i+1)*288])
+        mae, mse, rmse, mape = metric(name, pre[i*predict_days:(i+1)*], gt[i*predict_days:(i+1)*predict_days])
         rmse_all.append(rmse)
         mape_all.append(mape)
     l2.append(np.around(np.mean(np.array(rmse_all)),2))
@@ -63,17 +63,17 @@ def metric_g(name, pre, gt):
     lll.append(l3)
     return lll
 
-def metric_rolling(pre, gt):
+def metric_rolling(pre, gt, predict_days=288):
     pre = np.array(pre)
     gt = np.array(gt)
-    ll = int(len(pre)/288)
+    ll = int(len(pre)/predict_days)
     rmse_all1 = []
     mape_all1 = []
     rmse_all2 = []
     mape_all2 = []    
     for i in range(ll):
-        _, _, rmse1, mape1 = metric('EFSEED', pre[i*288:(i*288+288)], gt[i*288:(i*288+288)])
-        _, _, rmse2, mape2 = metric('EFSEED', pre[i*288:(i*288+16)], gt[i*288:(i*288+16)])
+        _, _, rmse1, mape1 = metric('EFSEED', pre[i*predict_days:(i*predict_days+predict_days)], gt[i*predict_days:(i*predict_days+predict_days)])
+        _, _, rmse2, mape2 = metric('EFSEED', pre[i*predict_days:(i*predict_days+16)], gt[i*predict_days:(i*predict_days+16)])
         rmse_all1.append(rmse1)
         mape_all1.append(mape1)
         rmse_all2.append(rmse2)

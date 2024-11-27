@@ -202,4 +202,4 @@ class EFSEED_I:
                 pre.extend(predicted)
                 gt.extend(ground_truth)
         print("Valid points: ", count)
-        metric_rolling(pre, gt)       
+        metric_rolling(pre, gt, self.predict_days)       
