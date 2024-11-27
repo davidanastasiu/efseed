@@ -366,7 +366,7 @@ class EFSEED:
         count = 0
         for test_point in val_points:
             point = trainX[trainX["datetime"]==test_point].index.values[0]
-            NN = np.isnan(trainX[point-15*24*4:point+3*24*4]["value"]).any() 
+            NN = np.isnan(trainX[point-self.train_days:point+self.predict_days]["value"]).any() 
             if not NN:
                 count += 1
         vals4 = aa

@@ -27,7 +27,6 @@ class DS:
         self.mini = 0
         self.R_mean = 0
         self.R_std = 0
-        self.is_stream = 1
         self.tag = []
         self.sensor_data = []
         self.diff_data = []
@@ -453,13 +452,7 @@ class DS:
         end_num = self.trainX[self.trainX["datetime"]==self.test_end_time].index.values[0] - start_num
         
         iterval = self.roll
-        if self.is_stream == 1:
-            for i in range(int((end_num-begin_num-3*24*4)/16)):
-                point = self.data_time[begin_num+i*16]
-                if not np.isnan(np.array(self.data[begin_num+i*16-15*24*4:begin_num+i*16 + 3*24*4])).any() :
-                    self.test_points.append([point])
-        else:
-            for i in range(int((end_num-begin_num-3*24)/iterval)): # do inference every 24 hours
-                point = self.data_time[begin_num+i*iterval]
-                if not np.isnan(np.array(self.data[begin_num+i*iterval-15*24:begin_num+i*iterval + 3*24])).any() :
-                    self.test_points.append([point])  
+        for i in range(int((end_num-begin_num-self.predict_days)/16)):
+            point = self.data_time[begin_num+i*16]
+            if not np.isnan(np.array(self.data[begin_num+i*16-self.train_days:begin_num+i*16 + self.predict_days])).any() :
+                self.test_points.append([point]) 

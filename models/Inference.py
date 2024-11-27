@@ -109,8 +109,8 @@ class EFSEED_I:
         
         # read stream data        
         point = trainX[trainX["datetime"]==test_point].index.values[0]
-        stream_data = trainX[point-15*24*4:point]["value"].values.tolist()
-        gt = trainX[point:point+3*24*4]["value"].values.tolist()
+        stream_data = trainX[point-self.train_days:point]["value"].values.tolist()
+        gt = trainX[point:point+self.predict_days]["value"].values.tolist()
         
         # read rain data
         R_X = pd.read_csv('./data_provider/datasets/'+self.opt.rain_sensor+'.csv', sep='\t')
