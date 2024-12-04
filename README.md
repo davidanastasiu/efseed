@@ -4,6 +4,13 @@ We present `EF-SEED`,  Enhanced Feature-based SEED (EF-SEED)  to considerably en
 
 
 ```bibtex
+@article{li2024Mseed,
+  title={Multivariate Segment Expandable Encoder-Decoder Model for Time Series Forecasting},
+  author={Li, Yanhong and Anastasiu, David C},
+  journal={IEEE Access},
+  year={2024},
+  publisher={IEEE}
+}
 @inproceedings{li2023seed,
   title={Seed: An effective model for highly-skewed streamflow time series data forecasting},
   author={Li, Yanhong and Xu, Jack and Anastasiu, David C},
