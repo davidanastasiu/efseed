@@ -1,6 +1,6 @@
 ## EF-SEED
 
-We present `EF-SEED`,  Enhanced Feature-based SEED (EF-SEED)  to considerably enhance streamflow prediction using multivariate time series data from rain and streamflow sensors. This work is expanded on the prior paper "Seed: An effective model for highly-skewed streamflow time series data forecasting". If you make use of our code or data, please cite our paper.
+We present `EF-SEED`,  Enhanced Feature-based SEED (EF-SEED)  to considerably enhance streamflow prediction using multivariate time series data from rain and streamflow sensors. This work is expanded on the prior paper "Seed: An effective model for highly-skewed streamflow time series data forecasting". If you make use of our code or data, please cite either or both our papers below.
 
 
 ```bibtex
@@ -11,6 +11,7 @@ We present `EF-SEED`,  Enhanced Feature-based SEED (EF-SEED)  to considerably en
   year={2024},
   publisher={IEEE}
 }
+
 @inproceedings{li2023seed,
   title={Seed: An effective model for highly-skewed streamflow time series data forecasting},
   author={Li, Yanhong and Xu, Jack and Anastasiu, David C},
