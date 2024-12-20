@@ -1,22 +1,12 @@
-# Hard Train......................
-# !/usr/bin/env python
-# coding: utf-8
-
-# In[17]:
-
-
 import time
 import os
-import sys  # unused?
 import math
 import torch.nn.functional as F
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim  # unused?
 import pandas as pd
 import random
-from scipy import stats  # unused?
 from ..utils.utils2 import (
     log_std_denorm_dataset,
     cos_date,
@@ -69,6 +59,7 @@ class EFSEED:
         self.batchsize = opt.batchsize
         self.epochs = opt.epochs
         self.layer_dim = opt.layer
+        self.predict_days = opt.output_len
 
         self.encoder = EncoderLSTM(self.opt).to(device)
         self.decoder = DecoderLSTM(self.opt).to(device)
@@ -76,12 +67,8 @@ class EFSEED:
         self.criterion = nn.MSELoss(reduction="sum")
         self.criterion1 = nn.HuberLoss(reduction="sum")
         self.criterion_KL = nn.KLDivLoss(reduction="sum")
-        self.encoder_optimizer = torch.optim.Adam(
-            self.encoder.parameters(), self.opt.learning_rate
-        )
-        self.decoder_optimizer = torch.optim.Adam(
-            self.decoder.parameters(), self.opt.learning_rate
-        )
+        self.encoder_optimizer = torch.optim.Adam(self.encoder.parameters(), self.opt.learning_rate)
+        self.decoder_optimizer = torch.optim.Adam(self.decoder.parameters(), self.opt.learning_rate)
 
         self.expr_dir = os.path.join(self.opt.outf, self.opt.name, "train")
         self.val_dir = os.path.join(self.opt.outf, self.opt.name, "val")
@@ -104,30 +91,21 @@ class EFSEED:
 
         return a2
 
+    
     def inference_test(self, x_test, y_input1):
-
-        y_predict = []
-        d_out = torch.tensor([]).to(device)  # unused?
         self.encoder.eval()
         self.decoder.eval()
-        sig = nn.Sigmoid()  # unused?
 
         with torch.no_grad():
-
-            x_test = torch.from_numpy(np.array(x_test, np.float32)).to(device)
-            y_input1 = torch.from_numpy(np.array(y_input1, np.float32)).to(device)
+            x_test = torch.tensor(x_test, dtype=torch.float32).to(device)
+            y_input1 = torch.tensor(y_input1, dtype=torch.float32).to(device)
 
             h0 = torch.zeros(self.layer_dim, x_test.size(0), self.hidden_dim).to(device)
             c0 = torch.zeros(self.layer_dim, x_test.size(0), self.hidden_dim).to(device)
 
             encoder_h, encoder_c = self.encoder(x_test, h0, c0)
-            out0, out1, out2, out3, out4 = self.decoder(
-                y_input1, x_test, encoder_h, encoder_c
-            )
-
-            y_predict.extend(out4)
-            y_predict = [y_predict[i].item() for i in range(len(y_predict))]
-            y_predict = np.array(y_predict).reshape(1, -1)
+            _, _, _, _, out4 = self.decoder(y_input1, x_test, encoder_h, encoder_c)
+            y_predict = out4.cpu().numpy().flatten().reshape(1, -1)
 
         return y_predict
 
@@ -152,16 +130,16 @@ class EFSEED:
         b = test_point
         e = test_point + self.predict_days
 
-        y2 = cos_date(
-            self.month[b:e], self.day[b:e], self.hour[b:e]
-        )  # represent cos(int(data)) here
-        y2 = [[ff] for ff in y2]
+        months = self.month[b:e]
+        days = self.day[b:e]
+        hours = self.hour[b:e]
 
-        y3 = sin_date(
-            self.month[b:e], self.day[b:e], self.hour[b:e]
-        )  # represent sin(int(data)) here
-        y3 = [[ff] for ff in y3]
+        y2 = cos_date(months, days, hours) 
+        y3 = sin_date(months, days, hours)
 
+        y2 = np.reshape(y2, (-1, 1))
+        y3 = np.reshape(y3, (-1, 1))        
+        
         y_input1 = np.array([np.concatenate((y2, y3), 1)])
 
         # inference
@@ -175,19 +153,14 @@ class EFSEED:
             x_test = np.array(
                 norm_data[test_point - self.train_days * 1: test_point], np.float32
             ).reshape(self.train_days, -1)
-        y_test = np.array(
-            norm_data[test_point: test_point + self.predict_days], np.float32
-        ).reshape(
-            self.predict_days, -1
-        )  # unused?
 
         x_test = [x_test]
         x_test = np.array(x_test)
 
         y_predict = self.inference_test(x_test, y_input1)
         y_predict = np.array(y_predict.tolist())[0]
-        y_predict = [y_predict[i].item() for i in range(len(y_predict))]
-
+        y_predict = y_predict.astype(float).tolist()
+               
         pre_gt = self.data[test_point - 1: test_point]
         pre_gt = pre_gt[0]
         if pre_gt is None:
@@ -239,17 +212,12 @@ class EFSEED:
             val_mape_list.extend(test_predict)
 
         name = "%s" % (self.opt.model)  # unused?
-        file_name = os.path.join(
-            self.val_dir, "validation_timestamps_24avg.tsv"
-        )  # unused?
 
         new_min_RMSE = min_RMSE
 
         if total < min_RMSE:
 
             # save_model
-            encoder_name = self.expr_dir + "/" + "EFSEED_encoder.pt"  # unused?
-            decoder_name = self.expr_dir + "/" + "EFSEED_decoder.pt"  # unused?
 
             new_min_RMSE = total
             expr_dir = os.path.join(self.opt.outf, self.opt.name, "train")
@@ -331,10 +299,6 @@ class EFSEED:
         end = time.time()
         print("Inferencing test points ", len(val_points), " use: ", end - start)
 
-        pd_temp = pd.DataFrame(
-            val_pred_list, columns=("start", "No.", "prediction")
-        )  # unused?
-
         if self.is_over_sampling == 1:
             OS = "_OS" + str(self.opt.oversampling)
         else:
@@ -351,7 +315,6 @@ class EFSEED:
             watersheds = "ProbFeature"
 
         basic_path = self.test_dir + "/" + str(self.sensor_id) + OS
-        basic_model_path = self.expr_dir + "/" + str(self.sensor_id) + OS  # unused?
 
         if self.opt.save == 1:
             aa = pd.DataFrame(data=val_pred_lists_print)
@@ -381,9 +344,7 @@ class EFSEED:
         print("generate test points file and test_data: ", end - start)
 
         # refresh the related values
-        self.test_data = np.array(self.dataset.get_test_points()).squeeze(
-            1
-        )  # read the test set
+        self.test_data = np.array(self.dataset.get_test_points()).squeeze(1)  # read the test set
         self.data = self.dataset.get_data()
         self.sensor_data_norm = self.dataset.get_sensor_data_norm()
         self.sensor_data_norm_1 = self.dataset.get_sensor_data_norm1()
@@ -408,24 +369,19 @@ class EFSEED:
         count = 0
         for test_point in val_points:
             point = trainX[trainX["datetime"] == test_point].index.values[0]
-            NN = np.isnan(
-                trainX[point - self.train_days: point + self.predict_days]["value"]
-            ).any()
+            NN = np.isnan(trainX[point - self.train_days: point + self.predict_days]["value"]).any()
             if not NN:
                 count += 1
         vals4 = aa
         # compute metrics
         all_GT = []
-        all_DAN = []
+        all_EFSEED = []
         loop = 0
         ind = 0
         while loop < len(val_points):
             ii = val_points[loop]
-            val_point = val_points[ind]  # unused?
             point = trainX[trainX["datetime"] == ii].index.values[0]
-            x = trainX[point - self.train_days: point + self.predict_days][
-                "value"
-            ].values.tolist()
+            x = trainX[point - self.train_days: point + self.predict_days]["value"].values.tolist()
             if np.isnan(np.array(x)).any():
                 loop = loop + 1  # id for time list
                 continue
@@ -435,8 +391,8 @@ class EFSEED:
             ind += 1
             temp_vals4 = list(vals4[ind - 1])
             all_GT.extend(x[self.train_days:])
-            all_DAN.extend(temp_vals4)
-        metrics = metric_rolling(np.array(all_DAN), np.array(all_GT))
+            all_EFSEED.extend(temp_vals4)
+        metrics = metric_rolling(np.array(all_EFSEED), np.array(all_GT))
         return metrics
 
     def train(self):
@@ -445,90 +401,61 @@ class EFSEED:
         early_stop = 0
         old_val_loss = 1000
         min_RMSE = 500000
-        sig = nn.Sigmoid()  # unused?
-        m = nn.Softmax(dim=1)  # unused?
-        if self.opt.watershed == 1:
-            dim_in = 3
-        else:
-            dim_in = 1  # unused?
+        m = nn.Softmax(dim=1)
 
         for epoch in range(num_epochs):
             print_loss_total = 0  # Reset every epoch
             self.encoder.train()
             self.decoder.train()
-            random0 = 0  # unused?
             start = time.time()
 
             for i, batch in enumerate(self.dataloader):
                 x_train = [TrainData for TrainData, _ in batch]
+                x_train = np.array(x_train)
                 y_train = [TrainLabel for _, TrainLabel in batch]
-                y_train = np.array(y_train).squeeze()
+                y_train = np.array(y_train)
 
-                y_train1 = []
-                for ii in range(len(y_train)):
-                    y_train1.append([yy for yy in [xx[:][1:3] for xx in y_train[ii]]])
+                y_train0 = y_train[:,:,0:1]
+                y_train1 = y_train[:,:,1:3]
 
-                y_train0 = []
-                for ii in range(len(y_train)):
-                    y_train0.append([yy for yy in [xx[:][0] for xx in y_train[ii]]])
-
-                x_train = torch.from_numpy(np.array(x_train, np.float32)).to(device)
-                y_train = torch.from_numpy(np.array(y_train0, np.float32)).to(device)
-                decoder_input1 = torch.from_numpy(np.array(y_train1, np.float32)).to(
-                    device
-                )
+                x_train = torch.tensor(x_train, dtype=torch.float32).to(device)
+                y_train = torch.tensor(y_train0, dtype=torch.float32).to(device)
+                decoder_input1 = torch.tensor(y_train1, dtype=torch.float32).to(device)
 
                 q0 = torch.tensor([self.quantile / 100]).to(device)
 
                 # compute ground segment label (Ensemble times=8, 32, 96, 288)
                 s_l = int(self.predict_days / 36)  # expand times 4, 3, 3, 4*3*3=36
-                y_train_s = y_train.view(
-                    y_train.size(0), s_l, int(self.predict_days / s_l)
-                )
+                y_train_s = y_train.view(y_train.size(0), s_l, int(self.predict_days / s_l)) 
                 seg_label_g0 = torch.quantile(y_train_s, q0, dim=2)[0]
 
-                y_train_s = y_train.view(
-                    y_train.size(0), 4 * s_l, int(self.predict_days / (4 * s_l))
-                )
+                y_train_s = y_train.view(y_train.size(0), 4 * s_l, int(self.predict_days / (4 * s_l)))
                 seg_label_g1 = torch.quantile(y_train_s, q0, dim=2)[0]
 
-                y_train_s = y_train.view(
-                    y_train.size(0), 12 * s_l, int(self.predict_days / (12 * s_l))
-                )
+                y_train_s = y_train.view(y_train.size(0), 12 * s_l, int(self.predict_days / (12 * s_l)))
                 seg_label_g3 = torch.quantile(y_train_s, q0, dim=2)[0]
 
-                seg_label_g4 = y_train
+                seg_label_g4 = y_train.view(y_train.size(0), self.predict_days)
 
                 self.encoder_optimizer.zero_grad()
                 self.decoder_optimizer.zero_grad()
 
                 loss = 0
 
-                h0 = torch.zeros(self.layer_dim, x_train.size(0), self.hidden_dim).to(
-                    device
-                )
-                c0 = torch.zeros(self.layer_dim, x_train.size(0), self.hidden_dim).to(
-                    device
-                )
+                h0 = torch.zeros(self.layer_dim, x_train.size(0), self.hidden_dim).to(device)
+                c0 = torch.zeros(self.layer_dim, x_train.size(0), self.hidden_dim).to(device)
                 # Forward pass
                 encoder_h, encoder_c = self.encoder(x_train, h0, c0)
-                out0, out1, out2, out3, out4 = self.decoder(
-                    decoder_input1, x_train, encoder_h, encoder_c
-                )
+                out0, out1, out2, out3, out4 = self.decoder(decoder_input1, x_train, encoder_h, encoder_c)
 
-                loss0 = self.criterion_KL(
-                    F.log_softmax(out0, dim=1), F.softmax(seg_label_g0, dim=1)
-                )
-                loss1 = self.criterion_KL(
-                    F.log_softmax(out1, dim=1), F.softmax(seg_label_g1, dim=1)
-                )
-                loss3 = self.criterion_KL(
-                    F.log_softmax(out3, dim=1), F.softmax(seg_label_g3, dim=1)
-                )
-                loss4 = self.criterion(out4, seg_label_g4)
+                loss0 = self.criterion_KL(F.log_softmax(out0,dim=1), F.softmax(seg_label_g0,dim=1))  
+                loss1 = self.criterion_KL(F.log_softmax(out1,dim=1), F.softmax(seg_label_g1,dim=1)) 
+                loss3 = self.criterion_KL(F.log_softmax(out3,dim=1), F.softmax(seg_label_g3,dim=1))
+                loss2 = self.criterion(out2[:,:16], seg_label_g4[:,:16]) 
+                loss4 = self.criterion(out4, seg_label_g4) 
 
-                l_w = max(-1 * np.exp(epoch / 45) + 2, 0.2)
-                loss = l_w * 100 * (loss0 + loss1 + loss3) + loss4
+                l_w = max(-1 * np.exp(epoch/45) + 2, 0.1)
+                loss = l_w *(200 *( loss0 + loss1 + loss3) + loss2) + loss4 
 
                 loss.backward()
                 self.encoder_optimizer.step()
@@ -542,26 +469,14 @@ class EFSEED:
             self.train_loss_list.append(print_loss_total)
             self.val_loss_list.append(val_loss)
             end = time.time()
-            print(
-                "-----------Epoch: {}. train_Loss>: {:.6f}. --------------------".format(
-                    epoch, print_loss_total
-                )
-            )
-            print(
-                "-----------Epoch: {}. val_Loss_rmse>: {:.6f}. --------------------".format(
-                    epoch, val_loss
-                )
-            )
-            print(
-                "-----------Epoch: {}. val_Loss_mape>: {:.6f}. --------------------".format(
-                    epoch, mape
-                )
-            )
-            print(
-                "-----------Epoch: {}. running time>: {:.6f}. --------------------".format(
-                    epoch, end - start
-                )
-            )
+            val_loss, min_RMSE, mape = self.generate_single_val_rmse(min_RMSE)
+            self.train_loss_list.append(print_loss_total)
+            self.val_loss_list.append(val_loss)
+            end = time.time()
+            print('-----------Epoch: {}. train_Loss>: {:.6f}. -------------'.format(epoch, print_loss_total)) 
+            print('-----------Epoch: {}. val_Loss_rmse>: {:.6f}. ------------'.format(epoch, val_loss)) 
+            print('-----------Epoch: {}. val_Loss_mape>: {:.6f}. -------------'.format(epoch, mape))
+            print('-----------Epoch: {}. running time>: {:.6f}. -------------'.format(epoch, end-start))
             # early stop
             if val_loss > old_val_loss:
                 early_stop += 1
