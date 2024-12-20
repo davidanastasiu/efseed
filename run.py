@@ -117,7 +117,7 @@ class Options:
         self.parser.add_argument(
             "--r_shift",
             type=int,
-            default=0,
+            default=60,
             help="shift positions of rain hinter, set to 288 without any predicted rain value. Otherwise, set to 0~288 according to the length of known forecasted rain data",
         )
         self.parser.add_argument(
