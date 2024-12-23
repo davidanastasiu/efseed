@@ -95,6 +95,12 @@ class DS:
         np.savetxt(self.expr_dir + "/" + "Norm.txt", norm)
         norm = np.loadtxt(self.expr_dir + "/" + "Norm.txt", dtype=float, delimiter=None)
         print("norm is: ", norm)
+
+        print("sensor data shape is:", self.data.shape)
+        print("sensor data norm1 shape is:", self.sensor_data_norm1.shape)
+        print("R sensor data shape is:", self.R_data.shape)
+        print("R sensor data norm1 shape is:", self.R_sensor_data_norm1.shape)
+
         if self.opt.mode == "train":
             self.val_dataloader()
             self.train_dataloader()
