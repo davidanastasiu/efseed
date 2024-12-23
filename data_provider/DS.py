@@ -303,13 +303,7 @@ class DS:
             while ii < self.opt.val_size:
 
                 # use randomly chosen validation set
-                i = random.randint(
-                    self.predict_days, len(self.data) - 31 * self.predict_days - 1
-                )
-
-                # Debugging prints
-                print(f"Random index i: {i}")
-                print(f"i + self.lens: {i + self.lens}")
+                i = random.randint(self.predict_days, len(self.data) - self.lens - 1)
 
                 a1 = -9
                 a2 = -6
@@ -323,7 +317,6 @@ class DS:
                     )
                 ):
                     point = self.data_time[i + self.train_days]
-                    print("point is: ", point)
 
                     self.tag[i + self.train_days] = 2  # tag 2 means in validation set
                     for k in range(near_len):
