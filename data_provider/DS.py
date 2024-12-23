@@ -304,16 +304,11 @@ class DS:
 
                 # use randomly chosen validation set
                 i = random.randint(
-                    self.predict_days, len(self.data) - 2 * self.predict_days - 1
+                    self.predict_days, len(self.data) - 31 * self.predict_days - 1
                 )
 
                 # Debugging prints
                 print(f"Random index i: {i}")
-                print(f"self.data.shape: {self.data.shape}")
-                print(f"self.sensor_data_norm1.shape: {self.sensor_data_norm1.shape}")
-                print(f"self.R_data.shape: {self.R_data.shape}")
-                print(f"self.sensor_data_norm1.shape: {self.sensor_data_norm1.shape}")
-                print(f"self.R_data.shape: {self.R_data.shape}")
                 print(f"i + self.lens: {i + self.lens}")
 
                 a1 = -9
