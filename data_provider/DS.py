@@ -41,14 +41,14 @@ class DS:
         self.data = []
         self.data_time = []
         self.sensor_data_norm = []
-        self.sensor_data_norm1 = []        
-               
+        self.sensor_data_norm1 = []
+
         self.R_sensor_data = []
         self.R_data = []
         self.R_data_time = []
         self.R_sensor_data_norm = []
         self.R_sensor_data_norm1 = []
-        
+
         self.val_points = []
         self.test_points = []
         self.start_num = 0
@@ -56,16 +56,18 @@ class DS:
         self.test_end_time = self.opt.test_end
         self.opt_hinter_dim = opt.watershed
         self.ind_dim = opt.r_shift
-        self.gm3 = GaussianMixture(n_components=3,)
-        
+        self.gm3 = GaussianMixture(
+            n_components=3,
+        )
+
         self.is_over_sampling = 0
         self.norm_percen = 0
         self.oversampling = int(opt.oversampling)
-            
+
         self.train_days = self.opt.input_len
         self.predict_days = self.opt.output_len
         self.val_near_days = self.predict_days
-        self.lens = self.train_days + self.predict_days+1
+        self.lens = self.train_days + self.predict_days + 1
         self.batch_size = opt.batchsize
         self.thre1 = 0
         self.thre2 = 0
@@ -93,13 +95,14 @@ class DS:
         np.savetxt(self.expr_dir + "/" + "Norm.txt", norm)
         norm = np.loadtxt(self.expr_dir + "/" + "Norm.txt", dtype=float, delimiter=None)
         print("norm is: ", norm)
+
         if self.opt.mode == "train":
             self.val_dataloader()
             self.train_dataloader()
         else:
             self.refresh_dataset(trainX, R_X)
-        self.roll = 8        
-        
+        self.roll = 8
+
     def get_trainX(self):
 
         return self.trainX
@@ -203,11 +206,16 @@ class DS:
         print("for sensor ", self.opt.stream_sensor, "start_num is: ", start_num)
 
         # foot label of train_end
-        train_end = self.trainX[self.trainX["datetime"]==self.opt.train_point].index.values[0] - start_num 
+        train_end = (
+            self.trainX[self.trainX["datetime"] == self.opt.train_point].index.values[0]
+            - start_num
+        )
         print("train set length is : ", train_end)
 
         # the whole dataset
-        self.sensor_data = self.trainX[start_num: train_end + start_num]  # e.g. 2011/7/1  22:30:00 - 2020/6/22  23:30:00
+        self.sensor_data = self.trainX[
+            start_num: train_end + start_num
+        ]  # e.g. 2011/7/1  22:30:00 - 2020/6/22  23:30:00
         self.data = np.array(self.sensor_data["value"].fillna(np.nan))
         self.diff_data = diff_order_1(self.data)
         self.data_time = np.array(self.sensor_data["datetime"].fillna(np.nan))
@@ -220,14 +228,21 @@ class DS:
                 self.R_X["datetime"] == self.opt.start_point
             ].index.values[0]
             print("for sensor ", self.opt.rain_sensor, "start_num is: ", R_start_num)
-            R_train_end = (self.R_X[self.R_X["datetime"] == self.opt.train_point].index.values[0]- R_start_num)
+            R_train_end = (
+                self.R_X[self.R_X["datetime"] == self.opt.train_point].index.values[0]
+                - R_start_num
+            )
             print("R_X set length is : ", R_train_end)
             self.R_sensor_data = self.R_X[R_start_num: R_train_end + R_start_num]
             self.R_data = np.array(self.R_sensor_data["value"].fillna(np.nan))
             self.R_data_time = np.array(self.R_sensor_data["datetime"].fillna(np.nan))
-            self.R_sensor_data_norm, self.R_mean, self.R_std = log_std_normalization(self.R_data)
+            self.R_sensor_data_norm, self.R_mean, self.R_std = log_std_normalization(
+                self.R_data
+            )
             self.R_sensor_data_norm1 = np.array(self.R_sensor_data_norm).reshape(-1, 1)
-            self.sensor_data_norm1 = np.concatenate((self.sensor_data_norm1, self.R_sensor_data_norm1), 1)
+            self.sensor_data_norm1 = np.concatenate(
+                (self.sensor_data_norm1, self.R_sensor_data_norm1), 1
+            )
             RR = self.R_sensor_data_norm
             RR = RR.tolist()
             for iR in range(int(self.ind_dim)):
@@ -237,13 +252,13 @@ class DS:
                     (self.sensor_data_norm1, np.array(RRt)), 1
                 )
 
-        GMM_input = self.R_sensor_data_norm 
-        if(self.is_prob_feature==1):
+        GMM_input = self.R_sensor_data_norm
+        if self.is_prob_feature == 1:
             clean_data = []
             for ii in range(len(GMM_input)):
                 if (GMM_input[ii] is not None) and (np.isnan(GMM_input[ii]) != 1):
                     clean_data.append(GMM_input[ii])
-            sensor_data_prob = np.array(clean_data, np.float32).reshape(-1, 1)   
+            sensor_data_prob = np.array(clean_data, np.float32).reshape(-1, 1)
             print("sensor_data_prob,", sensor_data_prob.shape)
             # dataset-wise gmm
             self.gm3.fit(sensor_data_prob)
@@ -251,20 +266,20 @@ class DS:
             self.z0 = np.min(self.gm_means)
             self.z1 = np.median(self.gm_means)
             self.z2 = np.max(self.gm_means)
-            
+
             print("gm3.means are: ", self.gm_means)
-            print("z : ", self.z0,self.z1,self.z2)
+            print("z : ", self.z0, self.z1, self.z2)
             print("gm3.covariances are: ", self.gm3.covariances_)
             print("gm3.weights are: ", self.gm3.weights_)
-    
+
         self.tag = gen_month_tag(self.sensor_data)
         print("self.tag len, ", len(self.tag))
-        
-        self.month, self.day, self.hour = gen_time_feature(self.sensor_data)        
+
+        self.month, self.day, self.hour = gen_time_feature(self.sensor_data)
         cos_d = cos_date(self.month, self.day, self.hour)
         cos_d = [[x] for x in cos_d]
         sin_d = sin_date(self.month, self.day, self.hour)
-        sin_d = [[x] for x in sin_d]  
+        sin_d = [[x] for x in sin_d]
 
     # Randomly choose a point in timesequence,
     # if it is a valid start time (with no nan value in the whole sequence, between Sep and May), tag it as 3
@@ -288,9 +303,8 @@ class DS:
             while ii < self.opt.val_size:
 
                 # use randomly chosen validation set
-                i = random.randint(
-                    self.predict_days, len(self.data) - 2 * self.predict_days - 1
-                )
+                i = random.randint(self.predict_days, len(self.data) - self.lens - 1)
+
                 a1 = -9
                 a2 = -6
                 if (
@@ -344,127 +358,208 @@ class DS:
                     self.predict_days,
                     len(self.sensor_data_norm) - 31 * self.predict_days - 1,
                 )
-                pre1 = np.array(self.data[(i+self.train_days):(i+self.train_days+self.predict_days)]) 
-                pre2 = np.array(self.R_sensor_data_norm[(i+self.train_days-int(self.predict_days/2)):(i+self.train_days+int(self.predict_days/2))])
+                pre1 = np.array(
+                    self.data[
+                        (i + self.train_days): (
+                            i + self.train_days + self.predict_days
+                        )
+                    ]
+                )
+                pre2 = np.array(
+                    self.R_sensor_data_norm[
+                        (i + self.train_days - int(self.predict_days / 2)): (
+                            i + self.train_days + int(self.predict_days / 2)
+                        )
+                    ]
+                )
                 a1 = -9
                 a2 = -6
-                if (np.max(pre2) > self.z2):
+                if np.max(pre2) > self.z2:
                     a3 = self.os_h
                     max_index = np.argmax(pre1)
                 a5 = self.iterval
-                if (jj < self.opt.train_volume*(self.oversampling/100)) and (np.max(pre2) > self.z2) and ( not np.isnan(self.sensor_data_norm1[i:i+self.lens]).any()) and (self.tag[i+self.train_days] <= a1 or a2 < self.tag[i+self.train_days] < 0):
+                if (
+                    (jj < self.opt.train_volume * (self.oversampling / 100))
+                    and (np.max(pre2) > self.z2)
+                    and (not np.isnan(self.sensor_data_norm1[i: i + self.lens]).any())
+                    and (
+                        self.tag[i + self.train_days] <= a1
+                        or a2 < self.tag[i + self.train_days] < 0
+                    )
+                ):
                     if a3 > 0:
-                        i = i + max_index -1
-                        i = i - int(a3*a5/2)
-                    for kk in range(a5): 
-                        i = i + a3 
-                        if i > len(self.data)-6*self.predict_days-1 or i < 6*self.predict_days :
+                        i = i + max_index - 1
+                        i = i - int(a3 * a5 / 2)
+                    for kk in range(a5):
+                        i = i + a3
+                        if (
+                            i > len(self.data) - 6 * self.predict_days - 1
+                            or i < 6 * self.predict_days
+                        ):
                             continue
-                        if ( not np.isnan(self.sensor_data_norm1[i:i+self.lens]).any() and self.tag[i+self.train_days] != 2 and self.tag[i+self.train_days] != 3 ): 
-                
-                            data0 = np.array(self.sensor_data_norm1[i:(i+self.train_days)]).reshape(self.train_days,-1)
-                            label00 = np.array(self.sensor_data_norm[(i+self.train_days):(i+self.train_days+self.predict_days)]) 
+                        if (
+                            not np.isnan(
+                                self.sensor_data_norm1[i: i + self.lens]
+                            ).any()
+                            and self.tag[i + self.train_days] != 2
+                            and self.tag[i + self.train_days] != 3
+                        ):
+
+                            data0 = np.array(
+                                self.sensor_data_norm1[i: (i + self.train_days)]
+                            ).reshape(self.train_days, -1)
+                            label00 = np.array(
+                                self.sensor_data_norm[
+                                    (i + self.train_days): (
+                                        i + self.train_days + self.predict_days
+                                    )
+                                ]
+                            )
                             label01 = label00
-                            label0 =[[ff] for ff in label01]
+                            label0 = [[ff] for ff in label01]
 
-                            b = i+self.train_days
-                            e = i+self.train_days+self.predict_days
+                            b = i + self.train_days
+                            e = i + self.train_days + self.predict_days
 
-                            label2 = cos_date(self.month[b:e], self.day[b:e], self.hour[b:e]) # represent cos(int(data)) here
+                            label2 = cos_date(
+                                self.month[b:e], self.day[b:e], self.hour[b:e]
+                            )  # represent cos(int(data)) here
                             label2 = [[ff] for ff in label2]
-                            
-                            label3 = sin_date(self.month[b:e], self.day[b:e], self.hour[b:e]) # represent sin(int(data)) here
+
+                            label3 = sin_date(
+                                self.month[b:e], self.day[b:e], self.hour[b:e]
+                            )  # represent sin(int(data)) here
                             label3 = [[ff] for ff in label3]
-                            
-                            label = np.concatenate((label0,label2),1)
-                            label = np.concatenate((label,label3),1)
-                            
-                            self.tag[i+self.train_days] = 4     
+
+                            label = np.concatenate((label0, label2), 1)
+                            label = np.concatenate((label, label3), 1)
+
+                            self.tag[i + self.train_days] = 4
                             jj = jj + 1
                             DATA.append(data0)
-                            Label.append(label)  
-                    
-                elif ii < self.opt.train_volume*(1 - self.oversampling/100) and ( not np.isnan(self.sensor_data_norm1[i:i+self.lens]).any()) and (self.tag[i+self.train_days] <= a1 or a2 < self.tag[i+self.train_days] < 0) : 
+                            Label.append(label)
 
-                    if (1==1):                     
-                        data0 = np.array(self.sensor_data_norm1[i:(i+self.train_days)]).reshape(self.train_days,-1)
-                        label00 = np.array(self.sensor_data_norm[(i+self.train_days):(i+self.train_days+self.predict_days)]) 
-                        label0 =[[ff] for ff in label00]
+                elif (
+                    ii < self.opt.train_volume * (1 - self.oversampling / 100)
+                    and (not np.isnan(self.sensor_data_norm1[i: i + self.lens]).any())
+                    and (
+                        self.tag[i + self.train_days] <= a1
+                        or a2 < self.tag[i + self.train_days] < 0
+                    )
+                ):
 
-                        b = i+self.train_days
-                        e = i+self.train_days+self.predict_days
+                    if 1 == 1:
+                        data0 = np.array(
+                            self.sensor_data_norm1[i: (i + self.train_days)]
+                        ).reshape(self.train_days, -1)
+                        label00 = np.array(
+                            self.sensor_data_norm[
+                                (i + self.train_days): (
+                                    i + self.train_days + self.predict_days
+                                )
+                            ]
+                        )
+                        label0 = [[ff] for ff in label00]
 
-                        label2 = cos_date(self.month[b:e], self.day[b:e], self.hour[b:e]) # represent cos(int(data)) here
+                        b = i + self.train_days
+                        e = i + self.train_days + self.predict_days
+
+                        label2 = cos_date(
+                            self.month[b:e], self.day[b:e], self.hour[b:e]
+                        )  # represent cos(int(data)) here
                         label2 = [[ff] for ff in label2]
 
-                        label3 = sin_date(self.month[b:e], self.day[b:e], self.hour[b:e]) # represent sin(int(data)) here
+                        label3 = sin_date(
+                            self.month[b:e], self.day[b:e], self.hour[b:e]
+                        )  # represent sin(int(data)) here
                         label3 = [[ff] for ff in label3]
 
-                        label = np.concatenate((label0,label2),1)
-                        label = np.concatenate((label,label3),1)
+                        label = np.concatenate((label0, label2), 1)
+                        label = np.concatenate((label, label3), 1)
 
                         DATA.append(data0)
-                        Label.append(label)                         
-                        self.tag[i+self.train_days] = 4
-                        ii = ii + 1                                                                  
-                
-        dataset1=RnnDataset(DATA,Label)
-        self.train_data_loader = DataLoader(dataset1, 
-                             self.batch_size,
-                             shuffle=False,
-                             num_workers=2,
-                             pin_memory=True,
-                             collate_fn=lambda x: x)
-    
+                        Label.append(label)
+                        self.tag[i + self.train_days] = 4
+                        ii = ii + 1
+
+        dataset1 = RnnDataset(DATA, Label)
+        self.train_data_loader = DataLoader(
+            dataset1,
+            self.batch_size,
+            shuffle=False,
+            num_workers=2,
+            pin_memory=True,
+            collate_fn=lambda x: x,
+        )
+
     def refresh_dataset(self, trainX, R_X):
         self.trainX = trainX
         self.R_X = R_X
         # read sensor data to vector
-        start_num = self.trainX[self.trainX["datetime"]==self.opt.start_point].index.values[0]
+        start_num = self.trainX[
+            self.trainX["datetime"] == self.opt.start_point
+        ].index.values[0]
         print("for sensor ", self.opt.stream_sensor, "start_num is: ", start_num)
         idx_num = 0
-        #foot label of train_end
-        train_end = self.trainX[self.trainX["datetime"]==self.opt.train_point].index.values[0] - start_num 
+        # foot label of train_end
+        train_end = (
+            self.trainX[self.trainX["datetime"] == self.opt.train_point].index.values[0]
+            - start_num
+        )
         print("train set length is : ", train_end)
-        
-        #the whole dataset
-        k = self.trainX[self.trainX["datetime"]==self.test_end_time].index.values[0]
-        f = self.trainX[self.trainX["datetime"]==self.test_start_time].index.values[0]
-        self.sensor_data = self.trainX[start_num:k] 
-        self.data = np.array(self.sensor_data["value"].fillna(np.nan))  
+
+        # the whole dataset
+        k = self.trainX[self.trainX["datetime"] == self.test_end_time].index.values[0]
+        f = self.trainX[self.trainX["datetime"] == self.test_start_time].index.values[0]
+        self.sensor_data = self.trainX[start_num:k]
+        self.data = np.array(self.sensor_data["value"].fillna(np.nan))
         self.diff_data = diff_order_1(self.data)
-        self.data_time = np.array(self.sensor_data["datetime"].fillna(np.nan)) 
-        self.sensor_data_norm = log_std_normalization_1(self.data, self.mean, self.std)  # use old mean & std  
-        self.sensor_data_norm1 = [[ff] for ff in self.sensor_data_norm] 
-        
-        if  (self.opt_hinter_dim >= 1):
-            # read Rain data to vector      
-            R_start_num = self.R_X[self.R_X["datetime"]==self.opt.start_point].index.values[0]
+        self.data_time = np.array(self.sensor_data["datetime"].fillna(np.nan))
+        self.sensor_data_norm = log_std_normalization_1(
+            self.data, self.mean, self.std
+        )  # use old mean & std
+        self.sensor_data_norm1 = [[ff] for ff in self.sensor_data_norm]
+
+        if self.opt_hinter_dim >= 1:
+            # read Rain data to vector
+            R_start_num = self.R_X[
+                self.R_X["datetime"] == self.opt.start_point
+            ].index.values[0]
             print("for sensor ", self.opt.rain_sensor, "start_num is: ", R_start_num)
             R_idx_num = 0
-            R_test_end = self.R_X[self.R_X["datetime"]==self.opt.test_end].index.values[0] - R_start_num 
-            print("R_X set length is : ", R_test_end)        
-            self.R_sensor_data = self.R_X[R_start_num:R_test_end+R_start_num] # e.g. 2011/7/1  22:30:00 - 2020/6/22  23:30:00 
-            self.R_data = np.array(self.R_sensor_data["value"].fillna(np.nan))    
-            self.R_data_time = np.array(self.R_sensor_data["datetime"].fillna(np.nan)) 
-            self.R_sensor_data_norm, self.R_mean, self.R_std = log_std_normalization(self.R_data)   
-            self.R_sensor_data_norm1 = [[ff] for ff in  self.R_sensor_data_norm] 
-            self.sensor_data_norm1 = np.concatenate((self.sensor_data_norm1, self.R_sensor_data_norm1), 1)
+            R_test_end = (
+                self.R_X[self.R_X["datetime"] == self.opt.test_end].index.values[0]
+                - R_start_num
+            )
+            print("R_X set length is : ", R_test_end)
+            self.R_sensor_data = self.R_X[
+                R_start_num: R_test_end + R_start_num
+            ]  # e.g. 2011/7/1  22:30:00 - 2020/6/22  23:30:00
+            self.R_data = np.array(self.R_sensor_data["value"].fillna(np.nan))
+            self.R_data_time = np.array(self.R_sensor_data["datetime"].fillna(np.nan))
+            self.R_sensor_data_norm, self.R_mean, self.R_std = log_std_normalization(
+                self.R_data
+            )
+            self.R_sensor_data_norm1 = [[ff] for ff in self.R_sensor_data_norm]
+            self.sensor_data_norm1 = np.concatenate(
+                (self.sensor_data_norm1, self.R_sensor_data_norm1), 1
+            )
             RR = self.R_sensor_data_norm
             RR = RR.tolist()
             for iR in range(self.ind_dim):
                 RR = [0] + RR[:-1]
-                RRt = [[ff] for ff in  RR] 
-                self.sensor_data_norm1 = np.concatenate((self.sensor_data_norm1, np.array(RRt)), 1)    
+                RRt = [[ff] for ff in RR]
+                self.sensor_data_norm1 = np.concatenate(
+                    (self.sensor_data_norm1, np.array(RRt)), 1
+                )
 
-        self.tag = gen_month_tag(self.sensor_data) # update        
-        self.month, self.day, self.hour = gen_time_feature(self.sensor_data) # update
-        
+        self.tag = gen_month_tag(self.sensor_data)  # update
+        self.month, self.day, self.hour = gen_time_feature(self.sensor_data)  # update
+
         cos_d = cos_date(self.month, self.day, self.hour)
         cos_d = [[x] for x in cos_d]
         sin_d = sin_date(self.month, self.day, self.hour)
         sin_d = [[x] for x in sin_d]
-        
 
     def gen_test_data(self):
 
