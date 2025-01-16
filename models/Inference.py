@@ -3,14 +3,17 @@ import numpy as np
 import torch
 import pandas as pd
 import random
-from ..utils.utils2 import (
+# from ..utils.utils2 import (
+from utils.utils2 import (
     log_std_denorm_dataset,
     sin_date,
     cos_date,
     log_std_normalization_1,
 )
-from ..utils.metric import metric_rolling
-from .EFSEED_model import EncoderLSTM, DecoderLSTM
+# from ..utils.metric import metric_rolling
+from utils.metric import metric_rolling
+# from .EFSEED_model import EncoderLSTM, DecoderLSTM
+from models.EFSEED_model import EncoderLSTM, DecoderLSTM
 from datetime import datetime, timedelta
 import zipfile
 
@@ -34,7 +37,7 @@ class EFSEED_I:
         self.is_prob_feature = 1 
         self.TrainEnd = opt.model
         self.ind_dim = opt.r_shift
-        self.is_stream = opt.is_stream          
+        self.is_stream = 1          
         self.is_over_sampling = 1
 
         self.batchsize = opt.batchsize
@@ -68,14 +71,14 @@ class EFSEED_I:
 
             h0 = torch.zeros(self.layer_dim, x_test.size(0), self.hidden_dim).to(device)
             c0 = torch.zeros(self.layer_dim, x_test.size(0), self.hidden_dim).to(device)
+            
             encoder_h, encoder_c = self.encoder(x_test, h0, c0)
             out0, out1, out2, out3, out4 = self.decoder(
                 y_input1, x_test, encoder_h, encoder_c
             )
-
-            y_predict.extend(out4)
-            y_predict = [y_predict[i].item() for i in range(len(y_predict))]
-            y_predict = np.array(y_predict).reshape(1, -1)
+            encoder_h, encoder_c = self.encoder(x_test, h0, c0)
+            _, _, _, _, out4 = self.decoder(y_input1, x_test, encoder_h, encoder_c)
+            y_predict = out4.cpu().numpy().flatten().reshape(1, -1)
 
         return y_predict
 
@@ -100,8 +103,6 @@ class EFSEED_I:
 
     def get_data(self, test_point):
 
-        #         print("test_point is: ", test_point)
-        # data prepare
         trainX = pd.read_csv(
             "./data_provider/datasets/" + self.opt.stream_sensor + ".csv", sep="\t"
         )
@@ -124,9 +125,7 @@ class EFSEED_I:
         )
         R_X.columns = ["id", "datetime", "value"]
         point = R_X[R_X["datetime"] == test_point].index.values[0]
-        rain_data = R_X[point - self.train_days - self.ind_dim: point][
-            "value"
-        ].values.tolist()
+        rain_data = R_X[point - self.train_days - self.ind_dim -1: point]["value"].values.tolist()
         NN = (
             np.isnan(rain_data).any()
             or np.isnan(stream_data).any()
