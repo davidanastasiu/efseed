@@ -1,12 +1,6 @@
-import time  # unused?
 import os
-import sys  # unused?
-import math  # unused?
-import torch.nn.functional as F  # unused?
 import numpy as np
 import torch
-import torch.nn as nn  # unused?
-import torch.optim as optim  # unused?
 import pandas as pd
 import random
 from ..utils.utils2 import (
@@ -31,21 +25,22 @@ class EFSEED_I:
 
         self.opt = opt
         self.sensor_id = opt.stream_sensor
-
+       
         self.train_days = opt.input_len
-        self.predict_days = opt.output_len
+        self.predict_days = opt.output_len  
         self.output_dim = opt.output_dim
         self.hidden_dim = opt.hidden_dim
         self.is_watersheds = opt.watershed
-        self.is_prob_feature = 1
+        self.is_prob_feature = 1 
         self.TrainEnd = opt.model
         self.ind_dim = opt.r_shift
+        self.is_stream = opt.is_stream          
         self.is_over_sampling = 1
 
         self.batchsize = opt.batchsize
         self.epochs = opt.epochs
         self.layer_dim = opt.layer
-
+        
         self.encoder = EncoderLSTM(self.opt).to(device)
         self.decoder = DecoderLSTM(self.opt).to(device)
 
@@ -63,7 +58,6 @@ class EFSEED_I:
     def inference_test(self, x_test, y_input1):
 
         y_predict = []
-        d_out = torch.tensor([]).to(device)  # unused?
         self.encoder.eval()
         self.decoder.eval()
 
@@ -139,7 +133,6 @@ class EFSEED_I:
             or np.isnan(gt).any()
         )
         if NN:
-            #             print(test_point, ": There is None value.")
             gt = None
 
         return stream_data, rain_data, gt
@@ -208,7 +201,6 @@ class EFSEED_I:
         y_predict = np.array(y_predict.tolist())[0]
         y_predict = [y_predict[i].item() for i in range(len(y_predict))]
         test_predict = np.array(self.std_denorm_dataset(y_predict))
-        diff_predict = []  # unused?
         test_predict = (test_predict + abs(test_predict)) / 2
 
         return test_predict
