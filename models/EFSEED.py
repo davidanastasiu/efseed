@@ -211,7 +211,6 @@ class EFSEED:
             gt_mape_list.extend(ground_truth)
             val_mape_list.extend(test_predict)
 
-        name = "%s" % (self.opt.model)  # unused?
 
         new_min_RMSE = min_RMSE
 
@@ -482,7 +481,7 @@ class EFSEED:
                 early_stop += 1
             else:
                 early_stop = 0
-            if early_stop >= 3:
+            if early_stop > 3:
                 break
             old_val_loss = val_loss
 
