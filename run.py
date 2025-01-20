@@ -1,12 +1,7 @@
 import argparse
 import os
 import torch
-import numpy as np  # unused?
-import random  # unused?
 import pandas as pd
-import sklearn  # unused?
-from sklearn.mixture import GaussianMixture  # unused?
-from scipy import stats  # unused?
 from .data_provider.DS import DS
 from .models.EFSEED import EFSEED
 from .models.Inference import EFSEED_I
@@ -200,7 +195,8 @@ class Options:
         self.opt.model = str(pt_file[:-4])
         c_dir = os.getcwd()
         print("current dir: ", c_dir)
-        os.chdir(pt_dir)
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        pt_file = os.path.join(current_dir, pt)
         with zipfile.ZipFile(pt_file, "r") as file:
             file.extract("opt.txt")
             self.load_parameters("opt.txt")
